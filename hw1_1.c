@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
@@ -44,7 +46,7 @@ int main(int argc, char *argv[])
 	int numbytes;
 	char pathExFile[30];
 	char pathNewFile[30];
-	char buf[BUFSIZ];
+	
 	
 	for(int i = 1; i < 7; ++i)
 	{
@@ -74,12 +76,15 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	char buf[numbytes];
 	int fd1 = open(pathExFile, O_RDONLY);
+	int directory = dirfd(fdopendir(fd1));
+	int fd = openat(directory, pathExFile, O_RDONLY);
 	
 
-	if (fd1 == -1)
+	if (fd == -1)
 	{
-		printf("Error: File %s Not In Directory! errno = %d\n",pathExFile, errno);
+		printf("Error: File %s Does Not Exist! errno = %d\n",pathExFile, errno);
 		exit(1);
 	}
 	
@@ -93,8 +98,8 @@ int main(int argc, char *argv[])
 		}
 
 		int n;
-		while((n = read(fd1, buf, numbytes)) > 0)
-			write(fd2, buf, numbytes);
+		while((n = read(fd, buf, numbytes)) > 0)
+			write(fd2, buf, n);
 
 		//if( != n)
 			//printf("Error: Bytes read does not equal bytes written! errno = %d\n", errno);
@@ -103,10 +108,7 @@ int main(int argc, char *argv[])
 	}
 
 	
-	//printf("%d %s %s\n", numbytes, pathExFile, pathNewFile);
-
-	//sscanf(argv[2], "%d", &numbytes);
-	//printf("%d", numbytes);
+	
 	
 	return 0;
 	// numbytes will be read after program reads -n from command line
