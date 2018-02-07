@@ -1,9 +1,10 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
-#define PERMS 777
+
 
 /*
 	File Copier Program
@@ -74,19 +75,34 @@ int main(int argc, char *argv[])
 	}
 
 	int fd1 = open(pathExFile, O_RDONLY);
-	if (fd1 == -1)
-		printf("Error: File %s Not In Directory! errno = %d\n",pathExFile, errno);
 	
 
-	int fd2 = creat(pathNewFile,PERMS);
-	if(fd2 == -1)
-		printf("Error: Cannot create %s! errno = %d\n",pathNewFile, errno);
+	if (fd1 == -1)
+	{
+		printf("Error: File %s Not In Directory! errno = %d\n",pathExFile, errno);
+		exit(1);
+	}
+	
+	else
+	{
+		int fd2 = creat(pathNewFile,S_IRWXU);
+		if(fd2 == -1)
+		{
+			printf("Error: Cannot create %s! errno = %d\n",pathNewFile, errno);
+			exit(1);
+		}
 
-	int n;
-	while((n = read(fd1, buf, numbytes)) > 0)
-		if(write(fd2, buf, numbytes) != n)
-			printf("Error: Bytes read does not equal bytes written! errno = %d\n", errno);
+		int n;
+		while((n = read(fd1, buf, numbytes)) > 0)
+			write(fd2, buf, numbytes);
 
+		//if( != n)
+			//printf("Error: Bytes read does not equal bytes written! errno = %d\n", errno);
+
+		
+	}
+
+	
 	//printf("%d %s %s\n", numbytes, pathExFile, pathNewFile);
 
 	//sscanf(argv[2], "%d", &numbytes);
