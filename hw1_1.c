@@ -78,11 +78,9 @@ int main(int argc, char *argv[])
 
 	char buf[numbytes];
 	int fd1 = open(pathExFile, O_RDONLY);
-	int directory = dirfd(fdopendir(fd1));
-	int fd = openat(directory, pathExFile, O_RDONLY);
 	
 
-	if (fd == -1)
+	if (fd1 == -1)
 	{
 		printf("Error: File %s Does Not Exist! errno = %d\n",pathExFile, errno);
 		exit(1);
@@ -98,7 +96,7 @@ int main(int argc, char *argv[])
 		}
 
 		int n;
-		while((n = read(fd, buf, numbytes)) > 0)
+		while((n = read(fd1, buf, numbytes)) >= 0)
 			write(fd2, buf, n);
 
 		//if( != n)
