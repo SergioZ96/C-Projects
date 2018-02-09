@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
-//#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
@@ -24,7 +23,8 @@
 	  ./hw1_1 -n #bytes -i pathname_existing_file -o pathname_new_file  
 
 	  		#bytes: the number of bytes each read() system call reads from the existing file 
-	  		(it is also the number of bytes each write() system call writes into the new file).
+	  		(it is also the number of bytes each write() system call writes into the new file) until
+	  		it reaches the end of the file.
 
 	  		pathname_existing_file: the pathname of the existing file
 
@@ -41,23 +41,27 @@ int main(int argc, char *argv[])
 	// There really are only three arguments we take from the command line: 
 	// numbytes (number of bytes), pathExFile(pathname of existing file), pathNewFile(pathname of new file)
 
-	/* For the program to work, argc has to be 7 due to all the arguments */
-	//int i = 0;
 	int numbytes;
-	char pathExFile[30];
-	char pathNewFile[30];
+	char pathExFile[100];
+	char pathNewFile[100];
 	
-	
+	/* For the program to work, argc has to be 7 due to all the arguments */
 	for(int i = 1; i < 7; ++i)
 	{
+		/* Handles error if there aren't enough arguments */
 		if(argv[i] == NULL && argc != 7)
 		{
-			//Handle error of not enough arguments
 			printf("Error: Not Enough Arguments!\n");
 			exit(1);
 		}
-		else
+		else /* Proceed with reading arguments/ store them into variables */
 		{
+			/*
+				- numbytes will be read after program reads -n from command line
+				- pathExFile will be read after program reads -i from command line
+				- pathNewFile is the pathname for the new file that will be constructed. Will be read after -o is read
+
+			*/
 
 			if(strcmp(argv[i],"-n") == 0)
 			{
@@ -71,19 +75,17 @@ int main(int argc, char *argv[])
 			{
 				strcpy(pathNewFile,argv[++i]);
 			}
-
-				
 		}
+
+		
 	}
 
-	char buf[numbytes];
-	int fd1 = open(pathExFile, O_RDONLY); // fd1 is a file descriptor produced by the open system call
-											// directory is the directory stream file descriptor of function 'dirfd(DIR *dirp)'
-										   // where DIR *dirp is the directory stream in the system. 'fdopendir(int fd)'
-										   // returns a DIR * directory stream of the path associated with int fd
+	char *buf;
+	buf = (char *) malloc(numbytes);
 
-	
-	
+	// fd1 is a file descriptor produced by the open system call
+	int fd1 = open(pathExFile, O_RDONLY); 
+											
 
 	if (fd1 == -1)
 	{
@@ -100,30 +102,25 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 
-		int n;
-		//while((n = read(fd1, buf, numbytes)) > 0)
-		//	write(fd2, buf, n);
+		int redBytes, writBytes;
 
-		n = read(fd1, buf, numbytes);
-		write(fd2, buf, n);
-
-		//if( != n)
-			//printf("Error: Bytes read does not equal bytes written! errno = %d\n", errno);
-
+		/* read() returns 0 if it reaches EOF. Loop until we get through the entire file.*/
+		while((redBytes = read(fd1, buf, numbytes)) > 0) 
+		{
+			/* Conditional: Number of written should equal number of bytes written.
+			   Therefore, if writbytes does not equal redBytes, handle the error and exit.
+			*/
+			if((writBytes = write(fd2, buf, redBytes)) != redBytes)
+			{
+				printf("Error: Bytes read does not equal bytes written! errno = %d\n", errno);
+				exit(1);
+			}
+		}
 		
+		free(buf);
 	}
 
 	
-	
-	
 	return 0;
-	// numbytes will be read after program reads -n from command line
-	// pathExFile will be read after program reads -i from command line
-	// pathNewFile is the pathname for the new file that will be constructed. Will be read after -o is read
 
-
-    /* Error Handling:
-	   - If pathExFile is non-existent, then handle with "File Does Not Exist"
-	   - If you cannot create a file in a directory with the pathNewFile, then handle with "Cannot create file in ...(pathNewFile)..."
-	*/
 }
