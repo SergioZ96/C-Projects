@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <dirent.h>
+//#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 	// numbytes (number of bytes), pathExFile(pathname of existing file), pathNewFile(pathname of new file)
 
 	/* For the program to work, argc has to be 7 due to all the arguments */
-	int i = 0;
+	//int i = 0;
 	int numbytes;
 	char pathExFile[30];
 	char pathNewFile[30];
@@ -101,8 +101,11 @@ int main(int argc, char *argv[])
 		}
 
 		int n;
-		while((n = read(fd1, buf, numbytes)) > 0)
-			write(fd2, buf, n);
+		//while((n = read(fd1, buf, numbytes)) > 0)
+		//	write(fd2, buf, n);
+
+		n = read(fd1, buf, numbytes);
+		write(fd2, buf, n);
 
 		//if( != n)
 			//printf("Error: Bytes read does not equal bytes written! errno = %d\n", errno);
