@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
-//#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
@@ -63,7 +62,7 @@ int main(int argc, char *argv[])
 	{
 		/* To print out the number of lines from a file, 
 		bytes have to continuously be read until it reaches new line character
-		'\n', where a counter keeps track of what line it is on and prints buf
+		'\n', where linecount keeps track of what line it is on and prints content
 		*/
 		int readBytes, counter = 0;
 		int linecount = 0;
@@ -81,7 +80,13 @@ int main(int argc, char *argv[])
 						printf("%c",content[j]);
 					}
 				}
+				
 			}
+		}
+		if(linecount < numlines)
+		{
+			printf("Error: File only has %d lines!\n", linecount);
+			exit(1);
 		}
 
 
