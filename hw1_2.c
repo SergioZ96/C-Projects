@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 {
 
 	int numlines;
-	char pathFile[30];
+	char pathFile[50];
 
 	//argc will have to be 4, due to 4 arguments needed
 
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 				
 		}
 	}
-	char content[1000];
+	char content[8000];
 	char buf[1];
 	int fd1 = open(pathFile, O_RDONLY); // fd1 is a file descriptor produced by the open system call
 
