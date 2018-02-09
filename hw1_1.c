@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 		/* read() returns 0 if it reaches EOF. Loop until we get through the entire file.*/
 		while((redBytes = read(fd1, buf, numbytes)) > 0) 
 		{
-			/* Conditional: Number of written should equal number of bytes written.
+			/* Conditional: Number of written bytes should equal number of bytes read.
 			   Therefore, if writbytes does not equal redBytes, handle the error and exit.
 			*/
 			if((writBytes = write(fd2, buf, redBytes)) != redBytes)
