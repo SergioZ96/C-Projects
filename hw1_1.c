@@ -81,17 +81,23 @@ int main(int argc, char *argv[])
 	}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 	char buf[numbytes];
 	int fd1 = open(pathExFile, O_RDONLY);
 	
 =======
+=======
+>>>>>>> 6a1f50e0e3a6bd33920439edf98a7e2d06a497de
 	char *buf;
 	buf = (char *) malloc(numbytes);
 
 	// fd1 is a file descriptor produced by the open system call
 	int fd1 = open(pathExFile, O_RDONLY); 
 											
+<<<<<<< HEAD
 >>>>>>> b7f2c0dd20335ca3b4985e9702caf1edef8730be
+=======
+>>>>>>> 6a1f50e0e3a6bd33920439edf98a7e2d06a497de
 
 	if (fd1 == -1)
 	{
@@ -109,6 +115,7 @@ int main(int argc, char *argv[])
 		}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 		int n;
 		while((n = read(fd1, buf, numbytes)) >= 0)
 			write(fd2, buf, n);
@@ -118,6 +125,9 @@ int main(int argc, char *argv[])
 =======
 		int redBytes, writBytes;
 >>>>>>> b7f2c0dd20335ca3b4985e9702caf1edef8730be
+=======
+		int redBytes, writBytes;
+>>>>>>> 6a1f50e0e3a6bd33920439edf98a7e2d06a497de
 
 		/* read() returns 0 if it reaches EOF. Loop until we get through the entire file.*/
 		while((redBytes = read(fd1, buf, numbytes)) > 0) 
