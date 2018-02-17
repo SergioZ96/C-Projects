@@ -40,7 +40,6 @@ int main (int argc, char *argv[])
 	FILE *fp; //file pointer 
 	int numLines;
 	char pathFile[100]; //arrays with initialized size
-	char buf[1000];
 
 	// Loop through the arguments
 	for(int i = 1; i < 4; ++i)
