@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 	for(int i = 1; i < 7; ++i)
 	{
 		/* Handles error if there aren't enough arguments */
-		if(argv[i] == NULL && argc != 7)
+		if(argc != 7)
 		{
 			printf("Error: Not Enough Arguments!\n");
 			exit(1);
