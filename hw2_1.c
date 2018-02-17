@@ -1,4 +1,8 @@
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
 /*
 	Write a C program with C library functions, which prints out the first part of a text file onto screen, similar to the head tool in Linux. 
 	Basically, you are asked to rewrite the program in homework 1-2. The new program uses C library functions (fread(), fgetc(), etc). 
@@ -19,8 +23,79 @@
 	pathname: the pathname of the file
 */
 
+/*
+bool file_exists(const char * filename)
+{
+	if (FILE * file = fopen(filename, "r"))
+	{
+		fclose(file);
+		return true;
+	}
+	return false;
+}
+*/
+extern int errno;
 int main (int argc, char *argv[])
 {
+	FILE *fp; //file pointer 
 	int numLines;
-	
+	char pathFile[100]; //arrays with initialized size
+	char buf[1000];
+
+	// Loop through the arguments
+	for(int i = 1; i < 4; ++i)
+	{
+		//Error if there aren't four arguments
+		if(argc != 4)
+		{
+			printf("Error: Not enough arguments!\n");
+			exit(1);
+		}
+		else
+		{
+			
+			// Compare the second argument to see if it equal to '-n'
+			if(strcmp(argv[i],"-n") == 0)
+			{
+				//Store the third element in argv as an int, into numLines
+				sscanf(argv[++i], "%d", &numLines);
+				//Copy fourth element from argv which is the pathname to 'pathFile'
+				strcpy(pathFile,argv[++i]);
+			}
+			else 
+			{
+				printf("Incorrect command: %s not recognized\n",argv[i]);
+				exit(1);
+			}
+				
+		}
+	}
+
+	fp = fopen(pathFile, "r");
+	if(fp == NULL)
+	{
+		printf("Error: Cannot open file %s\n", pathFile);
+		exit(1);
+	}
+	char c;
+	while(numLines > 0)
+	{
+		c = fgetc(fp);
+		if (feof(fp))
+			break;
+		if(c == '\n')
+			--numLines;
+
+		printf("%c", c);
+	}
+
+	fclose(fp);
+	return(0);
+/*
+	if (file_exists(pathFile) == true){
+		FILE *fp = fopen(filename,"r");
+		for ()
+	}
+*/
+
 }
