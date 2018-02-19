@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <sys/mman.h>
+
 #define NUMCHARS (1000)
 #define FILESIZE (NUMCHARS * sizeof(char))
 
@@ -76,6 +77,8 @@ int main (int argc, char *argv[])
 	}
 
 	map = mmap(0,FILESIZE,PROT_READ,MAP_SHARED,fd,0);
+	int lineCounter = 0;
+
 	if(map == MAP_FAILED)
 	{
 		close(fd);
@@ -85,16 +88,28 @@ int main (int argc, char *argv[])
 	
 	for(k = 0; k <=NUMCHARS; ++k)
 	{
-		if(map[k] == '\n' && numLines > 0)
-			--numLines;
 
-		printf("%c",map[k]);
-		if(numLines == 0 || map[k] == EOF)
+		if(map[k] == '\n' || map[k] == '\0')
 		{
-			printf("\n");
-			break;
+			++lineCounter;
+			if(lineCounter == numLines)
+			{
+				for(int j = 0; j < k; ++j)
+				{
+					printf("%c",map[j]);
+				}
+				printf("\n");
+			}
 		}
+
 	}
+	if(lineCounter < numLines)
+	{
+		printf("Error: File only has %d lines in it.\n", lineCounter);
+		exit(1);
+	}
+
+	
 
 	if(munmap(map, FILESIZE) == -1)
 	{

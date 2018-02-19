@@ -84,8 +84,8 @@ int main (int argc, char *argv[])
 			break;
 		if(c == '\n')
 			--numLines;
-
-		printf("%c", c);
+		
+		printf("%c",c);
 	}
 
 	fclose(fp);
