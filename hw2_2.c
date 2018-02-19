@@ -47,7 +47,8 @@ int main (int argc, char *argv[])
 	char *map;
 
 	//loop for going through the command line arguments 
-	for(int i = 1; i < 4; ++i)
+	int i;
+	for(i = 1; i < 4; ++i)
 	{
 		if(argc != 4)
 		{
@@ -94,7 +95,8 @@ int main (int argc, char *argv[])
 			++lineCounter;
 			if(lineCounter == numLines)
 			{
-				for(int j = 0; j < k; ++j)
+				int j;
+				for(j = 0; j < k; ++j)
 				{
 					printf("%c",map[j]);
 				}

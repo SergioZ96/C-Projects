@@ -42,7 +42,8 @@ int main (int argc, char *argv[])
 	char pathFile[100]; //arrays with initialized size
 
 	// Loop through the arguments
-	for(int i = 1; i < 4; ++i)
+	int i;
+	for(i = 1; i < 4; ++i)
 	{
 		//Error if there aren't four arguments
 		if(argc != 4)
