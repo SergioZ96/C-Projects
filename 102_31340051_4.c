@@ -41,13 +41,15 @@
 
 #define BUF_SIZE 1024
 
-int cl_direcDes(char *argv[]);
+char * cl_direcDes(char *argv[]);
+void dir_processor(char *pathname);
 
 struct linux_dirent {
 	long			d_ino;		// Inode number
 	off_t			d_off; 		// Offset to next dirent
 	unsigned short	d_reclen;	// Length of the current dirent
 	char			d_name[];	// Filename 
+ //	char			d_type;		// Might not be accepted in different systems. Therefore we will not use it for this program.
 };
 /*
 struct stat {
@@ -67,44 +69,24 @@ struct stat {
 extern int errno;
 int main(int argc, char *argv[])
 {
-	int direct_Descriptor, numbytes_read;
-	char buf[BUF_SIZE];
-	struct linux_dirent *dirEntry;
-
-	direct_Descriptor = cl_direcDes(argv);
 	
+	dir_processor(cl_direcDes(argv));
 	/* 
 		'direct_Descriptor' is the file descriptor for the pathname of the directory
 	*/
 	// int fstat(int fd, struct stat *statbuf);
 	
-	int b_position;
+	
 
 	//for( ; ; )
 	//{
-		numbytes_read = syscall(SYS_getdents, direct_Descriptor, buf, BUF_SIZE );
-		if(numbytes_read == -1) // Error
-		{
-			printf("Error! errno = %d", errno);
-			exit(1);
-		}
-		if(numbytes_read == 0) // EOF
-		{
-			exit(0);
-		}
-
-		for	(b_position = 0; b_position < numbytes_read; )
-		{
-			dirEntry = (struct linux_dirent *)(buf + b_position);
-			printf("%s\n", dirEntry->d_name);
-			b_position += dirEntry->d_reclen;
-		}	
+		
 	//}
 	return 0;
 
 }
 
-int cl_direcDes(char *argv[])
+char * cl_direcDes(char *argv[])
 {
 	int fd;
 	fd = open(argv[1], O_RDONLY | O_DIRECTORY);
@@ -113,6 +95,45 @@ int cl_direcDes(char *argv[])
 		printf("Error: Cannot find the directory at %s , errno = %d\n",argv[1], errno);
 		exit(1);
 	}
-	
-	return fd;
+	close(fd);
+	return argv[1];
+}
+
+void dir_processor(char * pathname)
+{
+	int direct_Descriptor, numbytes_read, b_pos;
+	char buf[BUF_SIZE];
+	struct linux_dirent *dirEntry;
+	char d_type;
+
+	//direct_Descriptor = cl_direcDes(argv);
+	direct_Descriptor = open(pathname, O_RDONLY | O_DIRECTORY);
+
+	numbytes_read = syscall(SYS_getdents, direct_Descriptor, buf, BUF_SIZE );
+	if(numbytes_read == -1) // Error
+	{
+		printf("Error! errno = %d\n", errno);
+		exit(1);
+	}
+	if(numbytes_read == 0) // EOF
+	{
+		exit(0);
+	}
+
+	for	(b_pos = 0; b_pos < numbytes_read; )
+	{
+		dirEntry = (struct linux_dirent *)(buf + b_pos);
+		d_type = *(buf + b_pos + dirEntry->d_reclen - 1);
+		printf("%s\n", dirEntry->d_name);
+		b_pos += dirEntry->d_reclen;
+		if(d_type == DT_DIR)
+		{
+			//dir_processor(dirEntry->d_name);
+		}
+		else if(d_type == DT_REG)
+		{
+			// Let the file function handle this
+		}
+	}	
+
 }
