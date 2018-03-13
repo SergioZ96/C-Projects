@@ -38,11 +38,14 @@
 #include <errno.h>
 #include <dirent.h>
 #include <sys/syscall.h>
+#include <string.h>
 
 #define BUF_SIZE 1024
+#define MAX_FILENAME 100
 
 char * cl_direcDes(char *argv[]);
-void dir_processor(char *pathname);
+struct stat dir_processor(char *pathname);
+
 
 struct linux_dirent {
 	long			d_ino;		// Inode number
@@ -66,74 +69,107 @@ struct stat {
 };
 */
 
+int b_position;
+static struct stat statStruct;
+
 extern int errno;
 int main(int argc, char *argv[])
 {
+	pid_t pid;
+	int pipefd[2];
+	int ret;
+	//char *buffed = malloc(MAX_FILENAME);
+	struct stat main_Stat;
+/*
+	ret = pipe(pipefd);
+	if(ret == -1)
+	{
+		printf("Error: Couldn't set up pipe! errno = %d", errno);
+		exit(1);
+	}
+
+	pid = fork();
+	if(pid == (pid_t)0) // child process
+	{
+		// closing the input side of pipe
+		close(pipefd[0]);
+
+
+
+	}
+
+	else // Parent process
+	{
+		// closing the output side of pipe
+		close(pipefd[1]);
+	}
 	
-	dir_processor(cl_direcDes(argv));
-	/* 
-		'direct_Descriptor' is the file descriptor for the pathname of the directory
-	*/
+*/	
+	// buffed = dir_processor(cl_direcDes(argv));
+	main_Stat = dir_processor(cl_direcDes(argv));
+	printf("%d\n", (int) main_Stat.st_size);
 	// int fstat(int fd, struct stat *statbuf);
 	
-	
-
-	//for( ; ; )
-	//{
-		
-	//}
 	return 0;
 
 }
 
 char * cl_direcDes(char *argv[])
 {
-	int fd;
-	fd = open(argv[1], O_RDONLY | O_DIRECTORY);
-	if(fd == -1)
+	struct stat statter;
+	int stat_Result = stat(argv[1], &statter);
+	if(S_ISREG(statter.st_mode))
 	{
-		printf("Error: Cannot find the directory at %s , errno = %d\n",argv[1], errno);
+		printf("Error: Path '- %s -' leads to a file.\n",argv[1]);
 		exit(1);
 	}
-	close(fd);
-	return argv[1];
+	if(S_ISDIR(statter.st_mode))
+		return argv[1];
 }
 
-void dir_processor(char * pathname)
+struct stat dir_processor(char * pathname)
 {
-	int direct_Descriptor, numbytes_read, b_pos;
-	char buf[BUF_SIZE];
+	int fd, nbytes_read; 
+	b_position = 0;
 	struct linux_dirent *dirEntry;
-	char d_type;
+	char fileName[MAX_FILENAME];
+	char buf[BUF_SIZE]; 
+	char *pathname_buffer = malloc(MAX_FILENAME);
 
-	//direct_Descriptor = cl_direcDes(argv);
-	direct_Descriptor = open(pathname, O_RDONLY | O_DIRECTORY);
-
-	numbytes_read = syscall(SYS_getdents, direct_Descriptor, buf, BUF_SIZE );
-	if(numbytes_read == -1) // Error
+	fd = open(pathname, O_RDONLY);
+	
+	nbytes_read = syscall(SYS_getdents, fd, buf, BUF_SIZE); // using getdents
+	//printf("%s 			%d\n\n", pathname, fd);
+	dirEntry = (struct linux_dirent*)(buf + b_position); // casting buf + b_position to dirEntry 
+														 // in order to move to the next file
+	if(nbytes_read == -1)
 	{
-		printf("Error! errno = %d\n", errno);
+		printf("Error: errno = %d, %s\n", errno, strerror(errno));
 		exit(1);
 	}
-	if(numbytes_read == 0) // EOF
+	if(nbytes_read == 0) // EOF
 	{
-		exit(0);
+		printf("nbytes_read = 0: EOF");
+		exit(1);//break;
+	}
+	// Pass original pathname + file to pathname_buffer
+	sprintf(pathname_buffer, "%s/%s", pathname, (char *) dirEntry->d_name);
+	
+	int status = stat(pathname_buffer, &statStruct);
+
+	if(S_ISREG(statStruct.st_mode)) // If the current item is a file
+	{
+		printf("%s\n", pathname_buffer);
+		return statStruct;	       // Return the struct( or more likely return a pointer to the struct)
 	}
 
-	for	(b_pos = 0; b_pos < numbytes_read; )
-	{
-		dirEntry = (struct linux_dirent *)(buf + b_pos);
-		d_type = *(buf + b_pos + dirEntry->d_reclen - 1);
-		printf("%s\n", dirEntry->d_name);
-		b_pos += dirEntry->d_reclen;
-		if(d_type == DT_DIR)
-		{
-			//dir_processor(dirEntry->d_name);
-		}
-		else if(d_type == DT_REG)
-		{
-			// Let the file function handle this
-		}
-	}	
+	else if(S_ISDIR(statStruct.st_mode))
+		dir_processor(pathname_buffer);
 
+	//printf("%s\n", pathname_buffer);
+	//return pathname_buffer;
+	//b_position += dirEntry->d_reclen;
+	//dirEntry = (struct linux_dirent*)(buf + b_position);
+	// Left off passing struct value through recursive function/check S_ISREG
 }
+
