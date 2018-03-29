@@ -27,7 +27,10 @@
 	the child, it updates the list. In this way, the parent process 
 	can provide a sorted list immediately after the child process 
 	finishes scanning --- the processes running in parallel.
+
 */
+
+// Credit to Gabriel Barros for clean code
 
 #include <stdio.h>
 #include <unistd.h>
@@ -38,13 +41,16 @@
 #include <errno.h>
 #include <dirent.h>
 #include <sys/syscall.h>
+#include <sys/wait.h>
 #include <string.h>
 
 #define BUF_SIZE 1024
-#define MAX_FILENAME 100
+#define MAX_FILENAME 500
 
-char * cl_direcDes(char *argv[]);
-struct stat dir_processor(char *pathname);
+char * cl_direc(char *argv[]);
+void dir_processor(char * pathname, FILE * writer);
+void fileread_info(FILE * reader, char * filename, int size);
+void sort(int size, char *f_name);
 
 
 struct linux_dirent {
@@ -54,67 +60,73 @@ struct linux_dirent {
 	char			d_name[];	// Filename 
  //	char			d_type;		// Might not be accepted in different systems. Therefore we will not use it for this program.
 };
-/*
-struct stat {
-	dev_t st_dev;			//ID of device
-	ino_t st_ino;			//Inode number
-	mode_t st_mode;			//File Type
-	nlink_t st_nlink;		//Number of hard links
-	uid_t st_uid;			//User ID of owner
-	gid_t st_gid;			//Group ID of owner
-	dev_t st_rdev;			//Device ID (if special file)
-	off_t st_size;			//Total size in bytes
-	blksize_t st_blksize;	//Block size for filesystem I/O
-	blkcnt_t st_blocks; 	//Number of 512B blocks allocated
-};
-*/
 
-int b_position;
-static struct stat statStruct;
+ struct file_info{
+	off_t file_size;
+	char file_name[MAX_FILENAME];
+};
+
+struct Node
+{
+	int filesize;
+	char *filename;
+	struct Node *next;
+};
+
+struct Node *head = NULL;
+
+//int b_position;
 
 extern int errno;
 int main(int argc, char *argv[])
 {
 	pid_t pid;
-	int pipefd[2];
-	int ret;
-	//char *buffed = malloc(MAX_FILENAME);
-	struct stat main_Stat;
-/*
+	int pipefd[2], ret;
+	char *arg_path = cl_direc(argv);
+
 	ret = pipe(pipefd);
 	if(ret == -1)
 	{
-		printf("Error: Couldn't set up pipe! errno = %d", errno);
+		printf("Error: Couldn't set up pipe! Reason: %s\n", strerror(errno));
 		exit(1);
 	}
+
+	FILE *reader = fdopen(pipefd[0], "r");
+	FILE *writer = fdopen(pipefd[1], "w");
 
 	pid = fork();
 	if(pid == (pid_t)0) // child process
 	{
 		// closing the input side of pipe
 		close(pipefd[0]);
-
-
+		dir_processor(arg_path, writer);
 
 	}
 
 	else // Parent process
 	{
+		struct file_info file;
+
 		// closing the output side of pipe
 		close(pipefd[1]);
+		fileread_info(reader, file.file_name, file.file_size);
+
+		struct Node *node = head;
+		while(node != NULL)
+		{
+			printf("%d\t%s\n", node->filesize, node->filename);
+			node = node->next;
+		}
+		
+		wait(NULL);
 	}
 	
-*/	
-	// buffed = dir_processor(cl_direcDes(argv));
-	main_Stat = dir_processor(cl_direcDes(argv));
-	printf("%d\n", (int) main_Stat.st_size);
-	// int fstat(int fd, struct stat *statbuf);
 	
 	return 0;
 
 }
 
-char * cl_direcDes(char *argv[])
+char * cl_direc(char *argv[])
 {
 	struct stat statter;
 	int stat_Result = stat(argv[1], &statter);
@@ -127,49 +139,121 @@ char * cl_direcDes(char *argv[])
 		return argv[1];
 }
 
-struct stat dir_processor(char * pathname)
+
+void dir_processor(char * path, FILE * writer)
 {
-	int fd, nbytes_read; 
-	b_position = 0;
-	struct linux_dirent *dirEntry;
+	int fd, nbytes, b_position; 
 	char fileName[MAX_FILENAME];
 	char buf[BUF_SIZE]; 
 	char *pathname_buffer = malloc(MAX_FILENAME);
 
-	fd = open(pathname, O_RDONLY);
-	
-	nbytes_read = syscall(SYS_getdents, fd, buf, BUF_SIZE); // using getdents
-	//printf("%s 			%d\n\n", pathname, fd);
-	dirEntry = (struct linux_dirent*)(buf + b_position); // casting buf + b_position to dirEntry 
-														 // in order to move to the next file
-	if(nbytes_read == -1)
+	struct linux_dirent *dirEntry;
+	struct stat statStruct;
+
+	fd = open(path, O_RDONLY);
+	if(fd == -1)
 	{
-		printf("Error: errno = %d, %s\n", errno, strerror(errno));
+		printf("Error: Cannot open pathname %, errno: %s\n", path, strerror(errno));
 		exit(1);
 	}
-	if(nbytes_read == 0) // EOF
-	{
-		printf("nbytes_read = 0: EOF");
-		exit(1);//break;
-	}
-	// Pass original pathname + file to pathname_buffer
-	sprintf(pathname_buffer, "%s/%s", pathname, (char *) dirEntry->d_name);
+	nbytes = syscall(SYS_getdents, fd, buf, BUF_SIZE); 
 	
-	int status = stat(pathname_buffer, &statStruct);
-
-	if(S_ISREG(statStruct.st_mode)) // If the current item is a file
+	for(b_position = 0;b_position < nbytes;)
 	{
-		printf("%s\n", pathname_buffer);
-		return statStruct;	       // Return the struct( or more likely return a pointer to the struct)
+		// using getdents
+
+		dirEntry = (struct linux_dirent*)(buf + b_position);
+											
+		if(nbytes == -1)
+		{
+			printf("Error: Cannot retrieve directory entries. Reason: %s\n", strerror(errno));
+			exit(1);
+		}
+		if(nbytes == 0) // EOF
+		{
+			break;
+		}
+
+		if(strcmp(dirEntry->d_name,".") != 0 &&
+			strcmp(dirEntry->d_name,"..") != 0)
+		{
+			
+				sprintf(pathname_buffer, "%s/%s", path, (char *) dirEntry->d_name);	
+				stat(pathname_buffer, &statStruct);
+				
+
+				if(S_ISREG(statStruct.st_mode)) // If the current item is a file
+				{
+					fprintf(writer, "%s , %d\n", pathname_buffer, statStruct.st_mode);
+					fflush(writer);
+				}
+
+				else if(S_ISDIR(statStruct.st_mode))
+					dir_processor(pathname_buffer, writer);
+				
+		}
+
+		b_position += dirEntry->d_reclen;
+		
 	}
 
-	else if(S_ISDIR(statStruct.st_mode))
-		dir_processor(pathname_buffer);
-
-	//printf("%s\n", pathname_buffer);
-	//return pathname_buffer;
-	//b_position += dirEntry->d_reclen;
-	//dirEntry = (struct linux_dirent*)(buf + b_position);
-	// Left off passing struct value through recursive function/check S_ISREG
+	close(fd);
 }
 
+void fileread_info(FILE * reader, char * filename, int size)
+{
+	while(fscanf(reader, "%s , %d\n", filename, &size) == 2)
+	{
+		char *f_name = malloc(strlen(filename)+1);
+		strcpy(f_name, filename);
+
+		// add/sort data sent to linked list
+		sort(size,f_name);
+	}
+}
+
+void sort(int size, char *f_name)
+{
+	struct Node *temp = head;
+	struct Node *prev = NULL;
+	struct Node *node;
+
+	node = (struct Node*) malloc(sizeof(struct Node));
+	node->filesize = size;
+	node->filename = f_name;
+	node->next = NULL;
+
+	if(temp == NULL)
+	{
+		node->next = NULL;
+		head = node;
+		return;
+	}
+
+	if(size < temp->filesize)
+	{
+		node->next = head;
+		head = node;
+		return;
+	}
+
+	else
+	{
+		while(temp  != NULL)
+		{
+			if(size > temp->filesize || size == temp->filesize)
+			{
+				prev = temp;
+				temp = temp->next;
+				continue;
+			}
+			else
+			{
+				prev->next = node;
+				node->next = temp;
+				return;
+			}
+		}
+		prev->next = node;
+	}
+}
